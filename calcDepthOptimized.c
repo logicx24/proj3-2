@@ -86,7 +86,27 @@ void calcDepthOptimized(float *depth, float *left, float *right, int imageWidth,
 
                             }
                         }
+			if (featureWidth - topX >= 4) { 
+		 	    for (boxX = topX; boxX <= featureWidth; boxX+=4) {
+                                for (int boxY = -featureHeight; boxY <= featureHeight; ++boxY) {
+                                
+                                    if (boxX + 4 > featureWidth) {
+                                        topX = boxX;
+                                        break;
+                                    }
+
+                                    l_temp = _mm_loadu_ps((left + ((y + boxY)*imageWidth + x + boxX)));
+                                    r_temp = _mm_loadu_ps((right + ((y + boxY + dy)*imageWidth + x + boxX + dx)));
+                                    subbed = _mm_sub_ps(l_temp, r_temp);
+                                    mulled = _mm_mul_ps(subbed, subbed);
+                                    store_vec = _mm_add_ps(store_vec, mulled);
+
+                                } 
+                            }
+			}
                     }
+
+      
                     else {
                         for (boxX = -featureWidth; boxX <= featureWidth; boxX+=4) {
                             for (int boxY = -featureHeight; boxY <= featureHeight; ++boxY) {
@@ -119,7 +139,7 @@ void calcDepthOptimized(float *depth, float *left, float *right, int imageWidth,
                             squaredDifference += difference * difference;
                         }
                     }
-
+		   
                     else  {
                         for (int boxY = -featureHeight; boxY <= featureHeight; ++boxY) {
                             l_temp = _mm_loadu_ps((left + ((y + boxY)*imageWidth + x + topX)));
@@ -146,8 +166,8 @@ void calcDepthOptimized(float *depth, float *left, float *right, int imageWidth,
                 }
             }
             
-            depth[y*imageWidth + x] = minDisp; 
-            //depth[y*imageWidth+x] = (minimumSquaredDifference != -1 ? (maximumDisplacement == 0 ? 0 : minDisp) : 0);
+           // depth[y*imageWidth + x] = minDisp; 
+            depth[y*imageWidth+x] = (minimumSquaredDifference != -1 ? (maximumDisplacement == 0 ? 0 : minDisp) : 0);
         }
     }
 }
