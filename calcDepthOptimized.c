@@ -45,16 +45,19 @@ void calcDepthOptimized(float *depth, float *left, float *right, int imageWidth,
     float difference;
 
     memset(depth, 0, imageHeight*imageWidth*sizeof(float));
-    for (int y = featureHeight; y < imageHeight-featureHeight; ++y) {
-        for (int x = featureWidth; x < imageWidth-featureWidth; ++x)  {
+    int x,y;
+    #pragma omp parallel for private(x)
+    for (y = featureHeight; y < imageHeight-featureHeight; ++y) {
+        for (x = featureWidth; x < imageWidth-featureWidth; ++x)  {
 
             minDisp = 0;
             minimumSquaredDifference = -1;
             minimumDy = 0;
             minimumDx = 0;
-            //#pragma omp parallel for
+            int dy, dx;
+            #pragma omp parallel for private(dy)
             for (int dx = MAX(-maximumDisplacement, featureWidth - x); dx <= MIN(maximumDisplacement, imageWidth - featureWidth - x - 1); ++dx) {
-                for (int dy = MAX(-maximumDisplacement, featureHeight - y); dy <= MIN(maximumDisplacement, imageHeight - featureHeight - y - 1); ++dy) {
+                for (dy = MAX(-maximumDisplacement, featureHeight - y); dy <= MIN(maximumDisplacement, imageHeight - featureHeight - y - 1); ++dy) {
 
                     squaredDifference = 0;
                     __m128 store_vec = _mm_setzero_ps();
@@ -68,9 +71,10 @@ void calcDepthOptimized(float *depth, float *left, float *right, int imageWidth,
                     int bool1 = 1;
 
                     if ((2*featureWidth + 1) >= 8) {
+                        int boxY;
+                        #pragma omp parallel for private(boxY)
                         for (boxX = -featureWidth; boxX <= featureWidth; boxX+=8) {
-                            #pragma omp parallel for
-                            for (int boxY = -featureHeight; boxY <= featureHeight; ++boxY) {
+                            for (boxY = -featureHeight; boxY <= featureHeight; ++boxY) {
                                 
                                 if (bool1 == 1 && boxX + 8 > featureWidth) {
                                     topX = boxX;
@@ -94,9 +98,10 @@ void calcDepthOptimized(float *depth, float *left, float *right, int imageWidth,
                         }
                         bool1 = 1;
 			            if (featureWidth - topX >= 4) {
+                            int boxY;
+                            #pragma omp parallel for private(boxY)
 		 	                for (boxX = topX; boxX <= featureWidth; boxX+=4) {
-                                #pragma omp parallel for
-                                for (int boxY = -featureHeight; boxY <= featureHeight; ++boxY) {
+                                for (boxY = -featureHeight; boxY <= featureHeight; ++boxY) {
                                 
                                     if (bool1 == 1 && boxX + 4 > featureWidth) {
                                         bool1 = 0;
@@ -117,10 +122,10 @@ void calcDepthOptimized(float *depth, float *left, float *right, int imageWidth,
 
       
                     else {
+                        int boxY;
+                        #pragma omp parallel for private(boxY)
                         for (boxX = -featureWidth; boxX <= featureWidth; boxX+=4) {
-                            #pragma omp parallel for
-                            for (int boxY = -featureHeight; boxY <= featureHeight; ++boxY) {
-                                
+                            for (boxY = -featureHeight; boxY <= featureHeight; ++boxY) {                                
                                 if (bool1 && boxX + 4 > featureWidth) {
                                     bool1 == 0;
                                     topX = boxX;
