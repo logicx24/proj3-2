@@ -14,7 +14,11 @@
 #include <stdio.h>
 #include <string.h>
 
-
+// include OpenMP
+#if !defined(_MSC_VER)
+#include <pthread.h>
+#endif
+#include <omp.h>
 
 #include "calcDepthOptimized.h"
 #include "calcDepthNaive.h"
@@ -41,7 +45,7 @@ void calcDepthOptimized(float *depth, float *left, float *right, int imageWidth,
     float difference;
 
     memset(depth, 0, imageHeight*imageWidth*sizeof(float));
-
+    #pragma omp parallel for
     for (int y = featureHeight; y < imageHeight-featureHeight; ++y) {
         for (int x = featureWidth; x < imageWidth-featureWidth; ++x)  {
 
@@ -49,7 +53,7 @@ void calcDepthOptimized(float *depth, float *left, float *right, int imageWidth,
             minimumSquaredDifference = -1;
             minimumDy = 0;
             minimumDx = 0;
-
+            #pragma omp parallel for
             for (int dx = MAX(-maximumDisplacement, featureWidth - x); dx <= MIN(maximumDisplacement, imageWidth - featureWidth - x - 1); ++dx) {
                 for (int dy = MAX(-maximumDisplacement, featureHeight - y); dy <= MIN(maximumDisplacement, imageHeight - featureHeight - y - 1); ++dy) {
 
@@ -62,14 +66,17 @@ void calcDepthOptimized(float *depth, float *left, float *right, int imageWidth,
                     __m128 tail_vec = _mm_setzero_ps();
                     int boxX;
                     int topX = 0;
+                    int bool1 = 1;
 
                     if ((2*featureWidth + 1) >= 8) {
+                        #pragma omp parallel for
                         for (boxX = -featureWidth; boxX <= featureWidth; boxX+=8) {
                             for (int boxY = -featureHeight; boxY <= featureHeight; ++boxY) {
                                 
-                                if (boxX + 8 > featureWidth) {
+                                if (bool1 == 1 && boxX + 8 > featureWidth) {
                                     topX = boxX;
-                                    break;
+                                    bool1 = 0;
+                                    //break;
                                 }
 
                                 l_temp = _mm_loadu_ps((left + ((y + boxY)*imageWidth + x + boxX)));
@@ -86,13 +93,15 @@ void calcDepthOptimized(float *depth, float *left, float *right, int imageWidth,
 
                             }
                         }
-			if (featureWidth - topX >= 4) { 
-		 	    for (boxX = topX; boxX <= featureWidth; boxX+=4) {
+                        bool1 = 1
+			            if (featureWidth - topX >= 4) {
+		 	                for (boxX = topX; boxX <= featureWidth; boxX+=4) {
                                 for (int boxY = -featureHeight; boxY <= featureHeight; ++boxY) {
                                 
-                                    if (boxX + 4 > featureWidth) {
+                                    if (bool1 == 1 && boxX + 4 > featureWidth) {
+                                        bool1 = 0;
                                         topX = boxX;
-                                        break;
+                                        //break;
                                     }
 
                                     l_temp = _mm_loadu_ps((left + ((y + boxY)*imageWidth + x + boxX)));
@@ -103,7 +112,7 @@ void calcDepthOptimized(float *depth, float *left, float *right, int imageWidth,
 
                                 } 
                             }
-			}
+			            }
                     }
 
       
@@ -111,9 +120,10 @@ void calcDepthOptimized(float *depth, float *left, float *right, int imageWidth,
                         for (boxX = -featureWidth; boxX <= featureWidth; boxX+=4) {
                             for (int boxY = -featureHeight; boxY <= featureHeight; ++boxY) {
                                 
-                                if (boxX + 4 > featureWidth) {
+                                if (bool1 && boxX + 4 > featureWidth) {
+                                    bool1 == 0;
                                     topX = boxX;
-                                    break;
+                                    //break;
                                 }
 
                                 l_temp = _mm_loadu_ps((left + ((y + boxY)*imageWidth + x + boxX)));
