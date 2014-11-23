@@ -14,11 +14,7 @@
 #include <stdio.h>
 #include <string.h>
 
-// include OpenMP
-#if !defined(_MSC_VER)
-#include <pthread.h>
-#endif
-#include <omp.h>
+
 
 #include "calcDepthOptimized.h"
 #include "calcDepthNaive.h"
@@ -45,19 +41,17 @@ void calcDepthOptimized(float *depth, float *left, float *right, int imageWidth,
     float difference;
 
     memset(depth, 0, imageHeight*imageWidth*sizeof(float));
-    int x,y;
-    #pragma omp parallel for private(x)
-    for (y = featureHeight; y < imageHeight-featureHeight; ++y) {
-        for (x = featureWidth; x < imageWidth-featureWidth; ++x)  {
+
+    for (int y = featureHeight; y < imageHeight-featureHeight; ++y) {
+        for (int x = featureWidth; x < imageWidth-featureWidth; ++x)  {
 
             minDisp = 0;
             minimumSquaredDifference = -1;
             minimumDy = 0;
             minimumDx = 0;
-            int dy, dx;
-            #pragma omp parallel for private(dy)
+
             for (int dx = MAX(-maximumDisplacement, featureWidth - x); dx <= MIN(maximumDisplacement, imageWidth - featureWidth - x - 1); ++dx) {
-                for (dy = MAX(-maximumDisplacement, featureHeight - y); dy <= MIN(maximumDisplacement, imageHeight - featureHeight - y - 1); ++dy) {
+                for (int dy = MAX(-maximumDisplacement, featureHeight - y); dy <= MIN(maximumDisplacement, imageHeight - featureHeight - y - 1); ++dy) {
 
                     squaredDifference = 0;
                     __m128 store_vec = _mm_setzero_ps();
@@ -68,18 +62,14 @@ void calcDepthOptimized(float *depth, float *left, float *right, int imageWidth,
                     __m128 tail_vec = _mm_setzero_ps();
                     int boxX;
                     int topX = 0;
-                    int bool1 = 1;
 
                     if ((2*featureWidth + 1) >= 8) {
-                        int boxY;
-                        #pragma omp parallel for private(boxY)
                         for (boxX = -featureWidth; boxX <= featureWidth; boxX+=8) {
-                            for (boxY = -featureHeight; boxY <= featureHeight; ++boxY) {
+                            for (int boxY = -featureHeight; boxY <= featureHeight; ++boxY) {
                                 
-                                if (bool1 == 1 && boxX + 8 > featureWidth) {
+                                if (boxX + 8 > featureWidth) {
                                     topX = boxX;
-                                    bool1 = 0;
-                                    //break;
+                                    break;
                                 }
 
                                 l_temp = _mm_loadu_ps((left + ((y + boxY)*imageWidth + x + boxX)));
@@ -96,17 +86,13 @@ void calcDepthOptimized(float *depth, float *left, float *right, int imageWidth,
 
                             }
                         }
-                        bool1 = 1;
-			            if (featureWidth - topX >= 4) {
-                            int boxY;
-                            #pragma omp parallel for private(boxY)
-		 	                for (boxX = topX; boxX <= featureWidth; boxX+=4) {
-                                for (boxY = -featureHeight; boxY <= featureHeight; ++boxY) {
+			if (featureWidth - topX >= 4) { 
+		 	    for (boxX = topX; boxX <= featureWidth; boxX+=4) {
+                                for (int boxY = -featureHeight; boxY <= featureHeight; ++boxY) {
                                 
-                                    if (bool1 == 1 && boxX + 4 > featureWidth) {
-                                        bool1 = 0;
+                                    if (boxX + 4 > featureWidth) {
                                         topX = boxX;
-                                        //break;
+                                        break;
                                     }
 
                                     l_temp = _mm_loadu_ps((left + ((y + boxY)*imageWidth + x + boxX)));
@@ -117,19 +103,17 @@ void calcDepthOptimized(float *depth, float *left, float *right, int imageWidth,
 
                                 } 
                             }
-			            }
+			}
                     }
 
       
                     else {
-                        int boxY;
-                        #pragma omp parallel for private(boxY)
                         for (boxX = -featureWidth; boxX <= featureWidth; boxX+=4) {
-                            for (boxY = -featureHeight; boxY <= featureHeight; ++boxY) {                                
-                                if (bool1 && boxX + 4 > featureWidth) {
-                                    bool1 == 0;
+                            for (int boxY = -featureHeight; boxY <= featureHeight; ++boxY) {
+                                
+                                if (boxX + 4 > featureWidth) {
                                     topX = boxX;
-                                    //break;
+                                    break;
                                 }
 
                                 l_temp = _mm_loadu_ps((left + ((y + boxY)*imageWidth + x + boxX)));
@@ -185,5 +169,5 @@ void calcDepthOptimized(float *depth, float *left, float *right, int imageWidth,
            // depth[y*imageWidth + x] = minDisp; 
             depth[y*imageWidth+x] = (minimumSquaredDifference != -1 ? (maximumDisplacement == 0 ? 0 : minDisp) : 0);
         }
-    } 
+    }
 }
