@@ -32,28 +32,23 @@ float displacementOptimized(int dx, int dy)
 
 void calcDepthOptimized(float *depth, float *left, float *right, int imageWidth, int imageHeight, 
                         int featureWidth, int featureHeight, int maximumDisplacement) {
-
-    float minimumSquaredDifference = -1;
-    float minDisp = 0;
-    int minimumDy;
-    int minimumDx;
-    float squaredDifference;
-    float difference;
-
+    
     memset(depth, 0, imageHeight*imageWidth*sizeof(float));
+#pragma omp parallel
+    {
 
+    #pragma omp for
     for (int y = featureHeight; y < imageHeight-featureHeight; ++y) {
         for (int x = featureWidth; x < imageWidth-featureWidth; ++x)  {
 
-            minDisp = 0;
-            minimumSquaredDifference = -1;
-            minimumDy = 0;
-            minimumDx = 0;
-
+            float minDisp = 0;
+            float minimumSquaredDifference = -1;
+            int minimumDy = 0;
+            int minimumDx = 0;
             for (int dx = MAX(-maximumDisplacement, featureWidth - x); dx <= MIN(maximumDisplacement, imageWidth - featureWidth - x - 1); ++dx) {
                 for (int dy = MAX(-maximumDisplacement, featureHeight - y); dy <= MIN(maximumDisplacement, imageHeight - featureHeight - y - 1); ++dy) {
 
-                    squaredDifference = 0;
+                    float squaredDifference = 0;
                     __m128 store_vec = _mm_setzero_ps();
                     __m128 l_temp;
                     __m128 r_temp;
@@ -133,7 +128,7 @@ void calcDepthOptimized(float *depth, float *left, float *right, int imageWidth,
 
                     if (featureWidth % 2 == 0) {
                         for (int boxY = -featureHeight; boxY <= featureHeight; ++boxY) {
-                            difference = left[(y + boxY)*imageWidth + x + topX] - right[(y + boxY + dy)*imageWidth + x + topX + dx];
+                            float difference = left[(y + boxY)*imageWidth + x + topX] - right[(y + boxY + dy)*imageWidth + x + topX + dx];
                             squaredDifference += difference * difference;
                         }
                     }
@@ -168,4 +163,5 @@ void calcDepthOptimized(float *depth, float *left, float *right, int imageWidth,
             depth[y*imageWidth+x] = (minimumSquaredDifference != -1 ? (maximumDisplacement == 0 ? 0 : minDisp) : 0);
         }
     }
+}
 }
