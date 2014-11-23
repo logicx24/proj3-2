@@ -86,8 +86,8 @@ void calcDepthOptimized(float *depth, float *left, float *right, int imageWidth,
 
                             }
                         }
-			if (featureWidth - topX >= 4) { 
-		 	    for (boxX = topX; boxX <= featureWidth; boxX+=4) {
+            			if (featureWidth - topX >= 4) { 
+            		 	    for (boxX = topX; boxX <= featureWidth; boxX+=4) {
                                 for (int boxY = -featureHeight; boxY <= featureHeight; ++boxY) {
                                 
                                     if (boxX + 4 > featureWidth) {
@@ -103,10 +103,8 @@ void calcDepthOptimized(float *depth, float *left, float *right, int imageWidth,
 
                                 } 
                             }
-			}
+                        }
                     }
-
-      
                     else {
                         for (boxX = -featureWidth; boxX <= featureWidth; boxX+=4) {
                             for (int boxY = -featureHeight; boxY <= featureHeight; ++boxY) {
